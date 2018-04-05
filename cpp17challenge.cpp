@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <iostream>
+#include <memory>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -35,13 +36,13 @@
 
 int main(int argc, char** argv) {
   if (argc != 5) {
+    std::cerr << "Usage: <command> <in_file> <col> <str> <out_file>" << std::endl;
     exit(1);
   }
   auto in_file = argv[1];
   auto out_file = argv[4];
   std::string col_name = argv[2];
   std::string col_val = argv[3];
-
   // Read from input file.
   errno = 0;
   auto in_fd = open(in_file, O_RDONLY);
@@ -54,7 +55,6 @@ int main(int argc, char** argv) {
    }
    exit(1);
   }
-
   // Open output file for writing.
   errno = 0;
   int out_fd = open(out_file, O_WRONLY | O_CREAT | O_TRUNC);
@@ -100,10 +100,11 @@ int main(int argc, char** argv) {
     count++;
   }
   std::stringstream output_stream;
-  char * dup = strdup(contents.c_str());
+  char* dup = strdup(contents.c_str());
   // Write first row.
-  char * data = strtok(dup, "\n");
+  auto data = strtok(dup, "\n");
   output_stream << data << "\n";
+  // delete data;
   // Write rest.
   std::string curr_delim = ",";
   int found = 1;
@@ -118,6 +119,9 @@ int main(int argc, char** argv) {
     output_stream << data << curr_delim;
     curr_delim = ",";
   }
+  // Note: We use free instead of delete, because the memory is initialized in
+  // strdup using malloc.
+  free(dup);
   // Write to output file.
   while (true) {
     auto read_bytes = output_stream.readsome(buf, BUF_SIZE);
