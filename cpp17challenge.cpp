@@ -57,7 +57,8 @@ int main(int argc, char** argv) {
   }
   // Open output file for writing.
   errno = 0;
-  int out_fd = open(out_file, O_RDWR | O_CREAT | O_TRUNC);
+  int out_fd = open(out_file, O_RDWR | O_CREAT | O_TRUNC,
+      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
   saved_errno = errno;
   if (out_fd == -1) {
     std::cerr << "error in opening output file: " << strerror(saved_errno) << std::endl;
