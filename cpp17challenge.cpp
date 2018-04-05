@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
   }
   // Open output file for writing.
   errno = 0;
-  int out_fd = open(out_file, O_WRONLY | O_CREAT | O_TRUNC);
+  int out_fd = open(out_file, O_RDWR | O_CREAT | O_TRUNC);
   saved_errno = errno;
   if (out_fd == -1) {
     std::cerr << "error in opening output file: " << strerror(saved_errno) << std::endl;
@@ -99,40 +99,39 @@ int main(int argc, char** argv) {
     cols += 1;
     count++;
   }
-  std::stringstream output_stream;
+  // Write @data to output file followed by delim.
+  auto write_out = [&](const char *data, char delim) {
+    errno = 0;
+    if (write(out_fd, data, strlen(data)) == -1) {
+      const int saved_errno = errno;
+      std::cout << "failed when writing to output file: " << strerror(saved_errno) << std::endl;
+      exit(1);
+    }
+    errno = 0;
+    if (write(out_fd, &delim, 1) == -1) {
+      const int saved_errno = errno;
+      std::cout << "failed when writing to output file: " << strerror(saved_errno) << std::endl;
+      exit(1);
+    }
+  };
   char* dup = strdup(contents.c_str());
   // Write first row.
   auto data = strtok(dup, "\n");
-  output_stream << data << "\n";
-  // delete data;
+  write_out(data, '\n');
   // Write rest.
-  std::string curr_delim = ",";
+  char curr_delim = ',';
   int found = 1;
-  while ((data = strtok(nullptr, curr_delim.c_str())) != nullptr) {
+  while ((data = strtok(nullptr, &curr_delim)) != nullptr) {
     found += 1;
     if (found == count + 2) {
-      output_stream << col_val << curr_delim;
-      curr_delim = "\n";
+      write_out(col_val.c_str(), curr_delim);
+      curr_delim = '\n';
       found = 0;
       continue;
     }
-    output_stream << data << curr_delim;
-    curr_delim = ",";
+    write_out(data, curr_delim);
+    curr_delim = ',';
   }
-  // Note: We use free instead of delete, because the memory is initialized in
-  // strdup using malloc.
   free(dup);
-  // Write to output file.
-  while (true) {
-    auto read_bytes = output_stream.readsome(buf, BUF_SIZE);
-    if (read_bytes == 0) {
-      break;
-    }
-    errno = 0;
-    if (write(out_fd, buf, read_bytes) == -1) {
-      const int saved_errno = errno;
-      std::cout << "failed when writing to output file: " << strerror(saved_errno) << std::endl;
-    }
-  }
   return 0;
 }
